@@ -1,5 +1,6 @@
 'use client';
 
+import { authLogin } from '@/app/api/auth/auth';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -13,20 +14,8 @@ const LoginForm = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        router.push('/');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Đăng nhập thất bại');
-      }
+      await authLogin(email, password);
+      router.push('/');
     } catch (error) {
       setError('Đăng nhập thất bại');
     }
