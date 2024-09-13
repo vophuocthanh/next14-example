@@ -1,48 +1,40 @@
-import { cookies } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  const formData = await request.formData();
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
+export async function POST(request: Request) {
+  const { email, password } = await request.json();
 
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_URL_API}/auth/login`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Đăng nhập thất bại');
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_URL_API}/auth/login`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
     }
+  );
 
-    const data = await response.json();
-
-    // Thiết lập cookie access_token và refresh_token
-    cookies().set('access_token', data.access_token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    });
-
-    cookies().set('refresh_token', data.refresh_token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    });
-
-    // Redirect về trang chủ nếu đăng nhập thành công
-    return NextResponse.redirect('/');
-  } catch (error) {
-    // Redirect lại trang đăng nhập với thông báo lỗi
-    return NextResponse.redirect(`/login?error=${error}`);
+  if (!response.ok) {
+    return NextResponse.json({ error: 'Đăng nhập thất bại' }, { status: 401 });
   }
+
+  const data = await response.json();
+
+  // Set cookies on the server
+  const responseWithCookies = NextResponse.json(data);
+  responseWithCookies.cookies.set('access_token', data.access_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+
+  responseWithCookies.cookies.set('refresh_token', data.refresh_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+
+  return responseWithCookies;
 }
